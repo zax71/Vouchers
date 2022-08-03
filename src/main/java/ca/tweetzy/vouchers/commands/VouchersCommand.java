@@ -18,47 +18,64 @@
 
 package ca.tweetzy.vouchers.commands;
 
-import ca.tweetzy.feather.command.AllowedExecutor;
-import ca.tweetzy.feather.command.Command;
-import ca.tweetzy.feather.command.ReturnType;
+import ca.tweetzy.feather.utils.Common;
 import ca.tweetzy.vouchers.Vouchers;
+import ca.tweetzy.vouchers.api.voucher.Voucher;
 import ca.tweetzy.vouchers.gui.GUIVouchersAdmin;
-import org.bukkit.command.CommandSender;
+import ca.tweetzy.vouchers.impl.importer.VouchersImporter;
+import co.aikar.commands.BaseCommand;
+import co.aikar.commands.annotation.*;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.List;
+@CommandAlias("vouchers")
+public class VouchersCommand extends BaseCommand {
 
-public final class VouchersCommand extends Command {
-
-	public VouchersCommand() {
-		super(AllowedExecutor.BOTH, "vouchers");
+	@Default
+	@CommandPermission("vouchers.admin")
+	public static void onAdmin(Player sender, String[] args) {
+		Vouchers.getGuiManager().showGUI(sender, new GUIVouchersAdmin());
 	}
 
-	@Override
-	protected ReturnType execute(CommandSender sender, String... args) {
-		if (sender instanceof final Player player)
-			Vouchers.getGuiManager().showGUI(player, new GUIVouchersAdmin());
+	@Subcommand("import")
+	@CommandPermission("vouchers.command.import")
+	public static void onImport(Player sender, String[] args) {
+		new VouchersImporter().load();
 
-		return ReturnType.SUCCESS;
+		Common.tell(sender, "&aImported any vouchers found within the exported v2 file. /vouchers to view");
+		Common.tell(sender, "&cWhile the importer shouldn't miss anything, it's always recommended to go back");
+		Common.tell(sender, "&cinto the /vouchers list and check if everything is correct!");
 	}
 
-	@Override
-	protected List<String> tab(CommandSender sender, String... args) {
-		return null;
+	@Subcommand("give")
+	@CommandPermission("vouchers.command.give")
+	@CommandCompletion("@players @vouchers @range:1-10")
+	public static void onGive(Player sender, String[] args) {
+
+		// Get values from command and put them in to the right type
+		final boolean isGivingAll = args[0].equals("*");
+		final Player target = Bukkit.getPlayerExact(args[0]);
+		final int amount = Integer.parseInt(args[2]);
+		final Voucher voucherFound = Vouchers.getVoucherManager().find(args[1]);
+
+		if (isGivingAll)
+			for (Player player : Bukkit.getOnlinePlayers()) {
+				for (int i = 0; i < amount; i++)
+					player.getInventory().addItem(voucherFound.buildItem());
+			}
+		else {
+			for (int i = 0; i < amount; i++)
+				target.getInventory().addItem(voucherFound.buildItem());
+		}
 	}
 
-	@Override
-	public String getPermissionNode() {
-		return "vouchers.admin";
-	}
-
-	@Override
-	public String getSyntax() {
-		return null;
-	}
-
-	@Override
-	public String getDescription() {
-		return null;
+	@Subcommand("help")
+	@HelpCommand
+	public static void onHelp(Player sender, String[] args) {
+		Common.tell(sender, "/vouchers usage");
+		Common.tell(sender, "&l/vouchers give <player/*> <voucher> [count] &r- gives a player the specified number of vouchers or * for all players");
+		Common.tell(sender, "&l/vouchers import &r- Imports V2 vouchers in to V3");
+		Common.tell(sender, "&l/vouchers &r- opens the voucher editing menu");
+		Common.tell(sender, "&l/vouchers help&r - opens this menu");
 	}
 }

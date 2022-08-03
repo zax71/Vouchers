@@ -28,8 +28,7 @@ import ca.tweetzy.feather.database.DatabaseConnector;
 import ca.tweetzy.feather.database.SQLiteConnector;
 import ca.tweetzy.feather.gui.GuiManager;
 import ca.tweetzy.feather.utils.Common;
-import ca.tweetzy.vouchers.commands.CommandGive;
-import ca.tweetzy.vouchers.commands.CommandImport;
+import ca.tweetzy.vouchers.api.voucher.Voucher;
 import ca.tweetzy.vouchers.commands.VouchersCommand;
 import ca.tweetzy.vouchers.database.DataManager;
 import ca.tweetzy.vouchers.database.migrations._1_InitialMigration;
@@ -40,6 +39,7 @@ import ca.tweetzy.vouchers.model.manager.RedeemManager;
 import ca.tweetzy.vouchers.model.manager.VoucherManager;
 import ca.tweetzy.vouchers.settings.Locale;
 import ca.tweetzy.vouchers.settings.Settings;
+import co.aikar.commands.PaperCommandManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -93,7 +93,20 @@ public final class Vouchers extends FeatherPlugin {
 		this.redeemManager.load();
 
 		this.guiManager.init();
-		this.commandManager.registerCommandDynamically(new VouchersCommand()).addSubCommands(new CommandImport(), new CommandGive());
+
+		// Register commands
+		PaperCommandManager commandManager = new PaperCommandManager(this);
+		commandManager.registerCommand(new VouchersCommand());
+
+		// Register CommandCompletion
+		commandManager.getCommandCompletions().registerCompletion("vouchers", c -> {
+			List<Voucher> VouchersList = Vouchers.getVoucherManager().getAll();
+			List<String> OutList = null;
+			for (Voucher voucher : VouchersList) {
+				OutList.add(voucher.getName());
+			}
+			return OutList;
+		});
 	}
 
 	@Override
